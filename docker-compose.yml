@@ -13,6 +13,9 @@ services:
       - ./config/api.config.json:/opt/elastalert-server/config/config.json
       - ./rules:/opt/elastalert/rules
       - ./rule_templates:/opt/elastalert/rule_templates
+      - ./data/elastalert/src/elastalert.py:/opt/elastalert/elastalert/elastalert.py
+      - ./data/elastalert/src/test_rule.py:/opt/elastalert/elastalert/test_rule.py
+      - ./data/elastalert/src/loaders.py:/opt/elastalert/elastalert/loaders.py
 
     extra_hosts:
       - 'elasticsearch:${PRAECO_ELASTICSEARCH}'
