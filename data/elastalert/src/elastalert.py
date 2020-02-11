@@ -1072,6 +1072,16 @@ class ElastAlerter(object):
                         break
                 else:
                     continue
+                for rule in self.disabled_rules:
+                    logging.warning('Rule file: %s' % rule['rule_file'])
+                    logging.warning('Match: %s' % rule_file)
+                    if rule['rule_file'] == rule_file:
+                        logging.warning('Remove from disabled_rule: %s' % rule_file)
+                        logging.warning('Before disabled_rules: %s' % self.disabled_rules)
+                        self.disabled_rules.remove(rule)
+                        logging.warning('After disabled_rules: %s' % self.disabled_rules)
+                        continue
+                logging.warning('Remove: %s' % rule_file)
                 self.scheduler.remove_job(job_id=rule['name'])
                 self.rules.remove(rule)
                 continue
@@ -1081,18 +1091,21 @@ class ElastAlerter(object):
                 # Rule file was changed, reload rule
                 try:
                     new_rule = self.rules_loader.load_configuration(rule_file, self.conf)
-                    logging.warning('rule file was changed: %s' % new_rule)
+                    logging.warning('rule file was changed: %s' % new_rule['name'])
                     if not new_rule:
                         logging.error('Invalid rule file skipped: %s' % rule_file)
                         continue
                     if 'is_enabled' in new_rule and not new_rule['is_enabled']:
                         elastalert_logger.warning('Rule file %s is now disabled.' % (rule_file))
                         elastalert_logger.warning('Rule %s is now disabled.' % (new_rule['name']))
-                        # TODO: prevent duplicate disabled_rule, disable -> edit
                         # Remove this rule if it's been disabled
                         # self.rules = [rule for rule in self.rules if rule['rule_file'] != rule_file]
                         # logging.warning('self.rules: %s' % self.rules)
-                        self.disabled_rules.append(new_rule)
+                        for rule in self.disabled_rules:
+                            if rule['rule_file'] == rule_file:
+                                break
+                        else: 
+                            self.disabled_rules.append(new_rule)
                         for rule in self.rules:
                             if rule['rule_file'] == rule_file:
                                 break
@@ -1140,7 +1153,7 @@ class ElastAlerter(object):
             for rule_file in set(new_rule_hashes.keys()) - set(self.rule_hashes.keys()):
                 try:
                     new_rule = self.rules_loader.load_configuration(rule_file, self.conf)
-                    logging.warning('New rule: %s' % new_rule)
+                    logging.warning('New rule: %s' % new_rule['name'])
                     if not new_rule:
                         logging.error('Invalid rule file skipped: %s' % rule_file)
                         continue
