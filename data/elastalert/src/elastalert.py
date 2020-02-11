@@ -30,7 +30,7 @@ from . import kibana
 from .alerts import DebugAlerter
 from .config import load_conf
 from .enhancements import DropMatchException
-from .kibana_discover import generate_kibana_discover_url
+# from .kibana_discover import generate_kibana_discover_url
 from .ruletypes import FlatlineRule
 from .util import add_raw_postfix
 from .util import cronite_datetime_to_timestamp
@@ -1503,10 +1503,10 @@ class ElastAlerter(object):
             if kb_link:
                 matches[0]['kibana_link'] = kb_link
 
-        if rule.get('generate_kibana_discover_url'):
-            kb_link = generate_kibana_discover_url(rule, matches[0])
-            if kb_link:
-                matches[0]['kibana_discover_url'] = kb_link
+        # if rule.get('generate_kibana_discover_url'):
+        #     kb_link = generate_kibana_discover_url(rule, matches[0])
+        #     if kb_link:
+        #         matches[0]['kibana_discover_url'] = kb_link
 
         # Enhancements were already run at match time if
         # run_enhancements_first is set or
