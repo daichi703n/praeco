@@ -118,6 +118,8 @@ class RulesLoader(object):
                     continue
                 # By setting "is_enabled: False" in rule file, a rule is easily disabled
                 if 'is_enabled' in rule and not rule['is_enabled']:
+                    # Temporary warn for debug
+                    logging.warn('Skip disabled rule: %s' % rule['name'])
                     continue
                 if rule['name'] in names:
                     raise EAException('Duplicate rule named %s' % (rule['name']))
@@ -126,6 +128,42 @@ class RulesLoader(object):
 
             rules.append(rule)
             names.append(rule['name'])
+
+        return rules
+
+
+    def load_disabled(self, conf, args=None):
+        """
+        Discover and load all the rules as defined in the conf and args.
+        :param dict conf: Configuration dict
+        :param dict args: Arguments dict
+        :return: List of rules
+        :rtype: list
+        """
+        names = []
+        use_rule = None if args is None else args.rule
+
+        # Load each rule configuration file
+        rules = []
+        rule_files = self.get_names(conf, use_rule)
+        for rule_file in rule_files:
+            try:
+                rule = self.load_configuration(rule_file, conf, args)
+                # A rule failed to load, don't try to process it
+                if not rule:
+                    logging.error('Invalid rule file skipped: %s' % rule_file)
+                    continue
+                # By setting "is_enabled: False" in rule file, a rule is easily disabled
+                if 'is_enabled' in rule and not rule['is_enabled']:
+                    # Temporary warn for debug
+                    logging.warn('Append disabled rule: %s' % rule['name'])
+                    rules.append(rule)
+                    names.append(rule['name'])
+                    continue
+                if rule['name'] in names:
+                    raise EAException('Duplicate rule named %s' % (rule['name']))
+            except EAException as e:
+                raise EAException('Error loading file %s: %s' % (rule_file, e))
 
         return rules
 

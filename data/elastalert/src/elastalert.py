@@ -157,7 +157,7 @@ class ElastAlerter(object):
         self.silence_cache = {}
         self.rule_hashes = self.rules_loader.get_hashes(self.conf, self.args.rule)
         self.starttime = self.args.start
-        self.disabled_rules = []
+        self.disabled_rules = self.rules_loader.load_disabled(self.conf, self.args)
         self.replace_dots_in_field_names = self.conf.get('replace_dots_in_field_names', False)
         self.thread_data.num_hits = 0
         self.thread_data.num_dupes = 0
@@ -1076,16 +1076,32 @@ class ElastAlerter(object):
                 self.rules.remove(rule)
                 continue
             if hash_value != new_rule_hashes[rule_file]:
+                # Temporary warn for degub
+                elastalert_logger.warning('Rule file %s' % (self.rules_loader.load_configuration(rule_file, self.conf)))
                 # Rule file was changed, reload rule
                 try:
                     new_rule = self.rules_loader.load_configuration(rule_file, self.conf)
+                    logging.warning('rule file was changed: %s' % new_rule)
                     if not new_rule:
                         logging.error('Invalid rule file skipped: %s' % rule_file)
                         continue
                     if 'is_enabled' in new_rule and not new_rule['is_enabled']:
-                        elastalert_logger.info('Rule file %s is now disabled.' % (rule_file))
+                        elastalert_logger.warning('Rule file %s is now disabled.' % (rule_file))
+                        elastalert_logger.warning('Rule %s is now disabled.' % (new_rule['name']))
+                        # TODO: prevent duplicate disabled_rule, disable -> edit
                         # Remove this rule if it's been disabled
-                        self.rules = [rule for rule in self.rules if rule['rule_file'] != rule_file]
+                        # self.rules = [rule for rule in self.rules if rule['rule_file'] != rule_file]
+                        # logging.warning('self.rules: %s' % self.rules)
+                        self.disabled_rules.append(new_rule)
+                        for rule in self.rules:
+                            if rule['rule_file'] == rule_file:
+                                break
+                        else:
+                            continue
+                        self.scheduler.remove_job(job_id=rule['name'])
+                        self.rules.remove(rule)
+                        
+                        elastalert_logger.warning('Updated rule: %s' % (rule_file))
                         continue
                 except EAException as e:
                     message = 'Could not load rule %s: %s' % (rule_file, e)
@@ -1103,9 +1119,14 @@ class ElastAlerter(object):
 
                 # Re-enable if rule had been disabled
                 for disabled_rule in self.disabled_rules:
+                    # Temporary warn for debug
+                    logging.warning('Disabled rule: %s' % disabled_rule)
+                    logging.warning('Disabled rule name: %s' % disabled_rule['name'])
+                    logging.warning('New rule name: %s' % new_rule['name'])
                     if disabled_rule['name'] == new_rule['name']:
                         self.rules.append(disabled_rule)
                         self.disabled_rules.remove(disabled_rule)
+                        new_rule = self.init_rule(new_rule, True)
                         break
 
                 # Initialize the rule that matches rule_file
@@ -1119,10 +1140,12 @@ class ElastAlerter(object):
             for rule_file in set(new_rule_hashes.keys()) - set(self.rule_hashes.keys()):
                 try:
                     new_rule = self.rules_loader.load_configuration(rule_file, self.conf)
+                    logging.warning('New rule: %s' % new_rule)
                     if not new_rule:
                         logging.error('Invalid rule file skipped: %s' % rule_file)
                         continue
                     if 'is_enabled' in new_rule and not new_rule['is_enabled']:
+                        self.disabled_rules.append(new_rule)
                         continue
                     if new_rule['name'] in [rule['name'] for rule in self.rules]:
                         raise EAException("A rule with the name %s already exists" % (new_rule['name']))
@@ -1175,7 +1198,8 @@ class ElastAlerter(object):
 
             # Show disabled rules
             if self.show_disabled_rules:
-                elastalert_logger.info("Disabled rules are: %s" % (str(self.get_disabled_rules())))
+                elastalert_logger.warning("Enabled rules are: %s" % (str(self.get_rules())))
+                elastalert_logger.warning("Disabled rules are: %s" % (str(self.get_disabled_rules())))
 
             # Wait before querying again
             sleep_duration = total_seconds(next_run - datetime.datetime.utcnow())
@@ -1310,6 +1334,10 @@ class ElastAlerter(object):
     def stop(self):
         """ Stop an ElastAlert runner that's been started """
         self.running = False
+
+    def get_rules(self):
+        """ Return rules """
+        return [rule['name'] for rule in self.rules]
 
     def get_disabled_rules(self):
         """ Return disabled rules """
