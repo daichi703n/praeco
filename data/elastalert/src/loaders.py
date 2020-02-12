@@ -118,8 +118,7 @@ class RulesLoader(object):
                     continue
                 # By setting "is_enabled: False" in rule file, a rule is easily disabled
                 if 'is_enabled' in rule and not rule['is_enabled']:
-                    # Temporary warn for debug
-                    logging.warn('Skip disabled rule: %s' % rule['name'])
+                    logging.debug('Skip disabled rule: %s' % rule['name'])
                     continue
                 if rule['name'] in names:
                     raise EAException('Duplicate rule named %s' % (rule['name']))
@@ -156,7 +155,7 @@ class RulesLoader(object):
                 # By setting "is_enabled: False" in rule file, a rule is easily disabled
                 if 'is_enabled' in rule and not rule['is_enabled']:
                     # Temporary warn for debug
-                    logging.warn('Append disabled rule: %s' % rule['name'])
+                    logging.debug('Append disabled rule: %s' % rule['name'])
                     rules.append(rule)
                     names.append(rule['name'])
                     continue

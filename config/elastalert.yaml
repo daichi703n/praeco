@@ -49,3 +49,6 @@ alert_time_limit:
   days: 2
 
 skip_invalid: True
+
+slack_ignore_ssl_errors: true
+# slack_ca_certs: ca.crt
