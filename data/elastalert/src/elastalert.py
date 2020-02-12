@@ -1073,6 +1073,9 @@ class ElastAlerter(object):
                         break
                 else:
                     continue
+                logging.warning('Remove: %s' % rule_file)
+                self.scheduler.remove_job(job_id=rule['name'])
+                self.rules.remove(rule)
                 for rule in self.disabled_rules:
                     logging.warning('Rule file: %s' % rule['rule_file'])
                     logging.warning('Match: %s' % rule_file)
@@ -1081,10 +1084,6 @@ class ElastAlerter(object):
                         logging.warning('Before disabled_rules: %s' % self.disabled_rules)
                         self.disabled_rules.remove(rule)
                         logging.warning('After disabled_rules: %s' % self.disabled_rules)
-                        continue
-                logging.warning('Remove: %s' % rule_file)
-                self.scheduler.remove_job(job_id=rule['name'])
-                self.rules.remove(rule)
                 continue
             if hash_value != new_rule_hashes[rule_file]:
                 # Temporary warn for degub
@@ -1505,6 +1504,7 @@ class ElastAlerter(object):
         if alert_time is None:
             alert_time = ts_now()
 
+        self.thread_data.alerts_sent = 0
         # Compute top count keys
         if rule.get('top_count_keys'):
             for match in matches:
